@@ -1,0 +1,1426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>R-Gradebook</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; height: 100%; }
+body { font-family: 'Inter', sans-serif; color: #1F2328; }
+input:focus { outline: 2px solid #107C41; outline-offset: -1px; position: relative; z-index: 2; }
+button:focus-visible { outline: 2px solid #107C41; outline-offset: 1px; }
+::-webkit-scrollbar { height: 10px; width: 10px; }
+::-webkit-scrollbar-thumb { background: #C7CCD1; border-radius: 5px; }
+::-webkit-scrollbar-track { background: #FFF6D9; }
+button { font-family: inherit; }
+
+:root {
+  --grid-line: 1px solid #E3D9AE;
+  --grid-line-strong: 1px solid #C9BA80;
+}
+
+.loading { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #FFF6D9; color: #5F6368; }
+
+.app { display: flex; flex-direction: column; height: 100vh; background: #FFF6D9; }
+
+.title-bar { display: flex; align-items: center; justify-content: space-between; background: #A6790C; color: #fff; padding: 8px 14px; flex-shrink: 0; }
+.title-left { display: flex; align-items: center; gap: 8px; }
+.logo-box { width: 24px; height: 24px; border-radius: 4px; background: #fff; color: #A6790C; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; }
+.title-text { font-size: 13.5px; font-weight: 600; }
+.title-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.save-text { font-size: 11.5px; opacity: 0.9; display: flex; align-items: center; gap: 6px; }
+.save-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; background: #8FD19E; }
+.user-text { font-size: 11.5px; opacity: 0.9; }
+.title-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: #fff; font-size: 11.5px; padding: 4px 10px; border-radius: 4px; cursor: pointer; }
+
+.body-area { flex: 1; overflow: auto; padding: 10px; min-height: 0; display: flex; flex-direction: column; }
+
+.pill-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-shrink: 0; flex-wrap: wrap; }
+.pill { border: 1px solid #E3D9AE; background: #fff; color: #3C4043; font-size: 12.5px; font-weight: 600; padding: 7px 18px; border-radius: 20px; cursor: pointer; }
+.pill.active { background: #A6790C; border-color: #A6790C; color: #fff; }
+.pill-hint { font-size: 11.5px; color: #80868B; margin-left: 6px; }
+
+.search-box { display: flex; align-items: center; gap: 4px; background: #fff; border: 1px solid #E3D9AE; border-radius: 20px; padding: 5px 10px 5px 12px; margin-left: auto; min-width: 180px; }
+.search-icon { font-size: 13px; color: #80868B; }
+.search-input { border: none; outline: none; background: transparent; font-size: 12.5px; font-family: inherit; width: 140px; color: #1F2328; }
+.search-clear-btn { border: none; background: none; color: #80868B; font-size: 15px; cursor: pointer; padding: 0 2px; line-height: 1; }
+
+.grid-scroll { overflow: auto; max-height: 100%; border: var(--grid-line-strong); background: #fff; }
+.sheet-table { border-collapse: collapse; font-size: 12.5px; width: 100%; }
+
+.col-letter-cell, .col-letter-cell-small { background: #F5E6A3; color: #5F6368; font-size: 10.5px; font-weight: 600; text-align: center; padding: 3px 4px; border-right: var(--grid-line); border-bottom: var(--grid-line-strong); }
+.col-letter-cell { position: sticky; top: 0; z-index: 3; }
+.header-cell { background: #FFF6D9; color: #3C4043; font-size: 11px; font-weight: 700; text-align: center; padding: 5px 6px; border-right: var(--grid-line); border-bottom: var(--grid-line-strong); position: sticky; top: 21px; z-index: 2; white-space: nowrap; }
+.header-sub { font-size: 9.5px; font-weight: 400; color: #80868B; }
+
+.row-num-cell { background: #FFF6D9; color: #80868B; font-size: 11px; text-align: center; border-right: var(--grid-line-strong); border-bottom: var(--grid-line); font-family: 'IBM Plex Mono', monospace; position: sticky; left: 0; z-index: 1; }
+.name-cell { background: #fff; border-right: var(--grid-line-strong); border-bottom: var(--grid-line); position: sticky; left: 34px; z-index: 1; padding: 0; }
+.name-cell-inner { display: flex; align-items: center; }
+.data-cell { border-right: var(--grid-line); border-bottom: var(--grid-line); text-align: center; padding: 5px 6px; font-family: 'IBM Plex Mono', monospace; white-space: nowrap; }
+.input-cell { border-right: var(--grid-line); border-bottom: var(--grid-line); padding: 0; }
+.alt-row { background: #FFFDF2; }
+
+.name-input { border: none; background: transparent; padding: 5px 8px; font-size: 12.5px; width: 140px; font-family: inherit; }
+.row-remove-btn { border: none; background: none; color: #C0392B; font-size: 15px; cursor: pointer; padding: 0 8px; line-height: 1; }
+.add-row-btn { border: none; background: none; color: #A6790C; font-size: 12.5px; cursor: pointer; padding: 6px 8px; font-weight: 600; text-align: left; }
+
+.score-input { border: none; background: transparent; padding: 5px 4px; font-size: 12.5px; width: 100%; text-align: center; font-family: 'IBM Plex Mono', monospace; box-sizing: border-box; }
+.text-input { border: none; background: transparent; padding: 5px 8px; font-size: 12.5px; width: 100%; font-family: inherit; box-sizing: border-box; }
+
+.class-stats-box { margin-top: 10px; background: #fff; border: var(--grid-line-strong); padding: 10px 12px; flex-shrink: 0; }
+.class-stats-title { font-size: 12px; font-weight: 700; color: #A6790C; margin-bottom: 6px; }
+.class-stats-grid { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.class-stats-item { display: flex; flex-direction: column; font-size: 11.5px; }
+.class-stats-subj { color: #3C4043; font-weight: 600; }
+.class-stats-vals { color: #80868B; font-family: 'IBM Plex Mono', monospace; }
+
+.setup-wrap { display: flex; flex-direction: column; gap: 14px; height: 100%; overflow: auto; padding-bottom: 10px; }
+.setup-block { flex-shrink: 0; }
+.setup-block-header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; padding: 0 2px; }
+.setup-block-title { font-size: 13.5px; font-weight: 700; color: #A6790C; }
+.setup-block-hint { font-size: 11.5px; color: #80868B; }
+.mini-table { border-collapse: collapse; font-size: 12.5px; min-width: 420px; }
+
+.max-row { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; background: #fff; border: var(--grid-line-strong); padding: 12px 14px; }
+.max-label { display: flex; flex-direction: column; font-size: 11.5px; color: #5F6368; gap: 4px; }
+.max-input { border: var(--grid-line-strong); border-radius: 4px; padding: 5px 8px; font-size: 13px; width: 80px; font-family: 'IBM Plex Mono', monospace; }
+.max-total { font-size: 12px; color: #A6790C; font-weight: 600; }
+
+.sheet-tab-bar { display: flex; gap: 2px; background: #F5E6A3; padding: 4px 8px; flex-shrink: 0; border-top: var(--grid-line-strong); }
+.sheet-tab { border: 1px solid transparent; background: transparent; color: #5F6368; font-size: 12px; padding: 6px 16px; cursor: pointer; border-radius: 3px 3px 0 0; }
+.sheet-tab.active { background: #fff; color: #A6790C; font-weight: 700; border-color: #D5DADD; border-bottom-color: #fff; }
+
+.notice { padding: 24px; background: #fff; border: var(--grid-line-strong); color: #5F6368; font-size: 13.5px; }
+
+.auth-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #FFF6D9; padding: 16px; box-sizing: border-box; }
+.auth-card { background: #fff; border: var(--grid-line-strong); border-radius: 6px; padding: 24px 26px; width: 100%; max-width: 340px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+.auth-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.auth-title { font-size: 15.5px; font-weight: 700; color: #1F2328; }
+.auth-subtitle { font-size: 12px; color: #80868B; margin-bottom: 18px; margin-top: 4px; }
+.auth-form { display: flex; flex-direction: column; gap: 12px; }
+.auth-label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: #3C4043; font-weight: 600; }
+.auth-input { border: var(--grid-line-strong); border-radius: 4px; padding: 8px 10px; font-size: 13px; font-family: inherit; box-sizing: border-box; width: 100%; }
+.auth-error { font-size: 11.5px; color: #C0392B; background: #FDECEA; border: 1px solid #F5C6C0; border-radius: 4px; padding: 6px 10px; }
+.auth-submit-btn { background: #A6790C; color: #fff; border: none; border-radius: 4px; padding: 10px 12px; font-size: 13px; font-weight: 700; cursor: pointer; margin-top: 4px; width: 100%; }
+.auth-submit-btn:disabled { opacity: 0.7; cursor: default; }
+.auth-switch { text-align: center; font-size: 12px; color: #5F6368; margin-top: 16px; }
+.auth-link-btn { border: none; background: none; color: #A6790C; font-weight: 700; font-size: 12px; cursor: pointer; padding: 0; }
+
+/* ---------- firebase setup screen ---------- */
+.setup-card { max-width: 460px; }
+.setup-steps { font-size: 12px; color: #3C4043; background: #FFF9E6; border: 1px solid #F5E6A3; border-radius: 6px; padding: 10px 12px; margin-bottom: 14px; line-height: 1.6; }
+.setup-steps a { color: #A6790C; }
+.setup-steps ol { margin: 4px 0 0; padding-left: 18px; }
+.auth-textarea { border: var(--grid-line-strong); border-radius: 4px; padding: 8px 10px; font-size: 12px; font-family: 'IBM Plex Mono', monospace; box-sizing: border-box; width: 100%; min-height: 110px; resize: vertical; }
+
+/* ---------- sort / filter controls ---------- */
+.sort-select { border: 1px solid #E3D9AE; background: #fff; color: #3C4043; font-size: 12.5px; font-weight: 600; padding: 7px 10px; border-radius: 20px; cursor: pointer; }
+
+/* ---------- link copy button ---------- */
+.link-btn { border: none; background: none; color: #A6790C; font-size: 11.5px; cursor: pointer; padding: 0 6px; font-weight: 600; white-space: nowrap; }
+.link-btn.copied { color: #107C41; }
+
+/* ---------- public report standalone page ---------- */
+.public-report-wrap { min-height: 100vh; background: #FFF6D9; padding: 24px 16px; box-sizing: border-box; }
+.public-report-toolbar { max-width: 640px; margin: 0 auto 12px; display: flex; justify-content: flex-end; gap: 8px; }
+.public-report-card { max-width: 640px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); overflow: hidden; }
+@media print {
+  .public-report-toolbar { display: none !important; }
+  .public-report-wrap { background: none; padding: 0; }
+  .public-report-card { box-shadow: none; }
+}
+
+/* ---------- online badge ---------- */
+.online-badge { font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 10px; letter-spacing: 0.2px; }
+.online-badge.online { background: rgba(255,255,255,0.18); color: #fff; }
+.online-badge.offline { background: #C0392B; color: #fff; }
+
+/* ---------- export menu ---------- */
+.export-wrap { position: relative; }
+.export-menu { position: absolute; right: 0; top: 100%; margin-top: 6px; background: #fff; border: 1px solid #E3D9AE; border-radius: 6px; box-shadow: 0 6px 18px rgba(0,0,0,0.18); min-width: 220px; z-index: 60; padding: 5px; }
+.export-menu-item { display: block; width: 100%; text-align: left; background: none; border: none; padding: 8px 10px; font-size: 12.5px; color: #3C4043; cursor: pointer; border-radius: 4px; }
+.export-menu-item:hover { background: #FFF3C4; }
+.export-menu-divider { height: 1px; background: #F5E6A3; margin: 4px 2px; }
+
+/* ---------- report card modal ---------- */
+.report-overlay { position: fixed; inset: 0; background: rgba(38,28,0,0.55); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
+.report-card-modal { background: #fff; width: 100%; max-width: 640px; max-height: 92vh; overflow: auto; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
+.report-modal-toolbar { display: flex; justify-content: flex-end; gap: 8px; padding: 10px 14px; border-bottom: 1px solid #F5E6A3; position: sticky; top: 0; background: #fff; z-index: 2; }
+.report-card-sheet { padding: 28px 32px; }
+.report-header { text-align: center; border-bottom: 3px double #A6790C; padding-bottom: 12px; margin-bottom: 16px; }
+.report-school-name { font-size: 18px; font-weight: 800; color: #A6790C; letter-spacing: 0.4px; }
+.report-doc-title { font-size: 11.5px; color: #80868B; margin-top: 4px; text-transform: uppercase; letter-spacing: 1.2px; }
+.report-student-row { display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
+.report-student-row span { color: #80868B; }
+.report-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 16px; }
+.report-table th, .report-table td { border: 1px solid #E3D9AE; padding: 6px 8px; text-align: center; }
+.report-table th { background: #FFF3C4; font-weight: 700; }
+.report-table td:first-child, .report-table th:first-child { text-align: left; }
+.report-summary { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; }
+.report-summary-item { background: #FFF9E6; border: 1px solid #F5E6A3; border-radius: 6px; padding: 8px 14px; text-align: center; min-width: 88px; }
+.report-summary-label { display: block; font-size: 10px; color: #80868B; text-transform: uppercase; letter-spacing: 0.4px; }
+.report-summary-value { display: block; font-size: 16px; font-weight: 800; color: #A6790C; }
+.report-remark { font-size: 11.5px; color: #5F6368; }
+.report-signature-row { display: flex; justify-content: space-between; margin-top: 40px; font-size: 11.5px; color: #5F6368; }
+.report-sig-line { border-top: 1px solid #B7BEC4; width: 160px; text-align: center; padding-top: 4px; }
+
+@media print {
+  body * { visibility: hidden; }
+  #report-print-area, #report-print-area * { visibility: visible; }
+  #report-print-area { position: absolute; left: 0; top: 0; width: 100%; }
+  .report-modal-toolbar { display: none !important; }
+  .report-overlay { position: static; background: none; padding: 0; display: block; }
+  .report-card-modal { box-shadow: none; max-height: none; max-width: none; overflow: visible; }
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- Firebase SDKs (compat build — simplest to use without a bundler) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/12.15.0/firebase-app-compat.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/12.15.0/firebase-auth-compat.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/12.15.0/firebase-firestore-compat.min.js"></script>
+
+<script>
+"use strict";
+
+// ============================================================
+// helpers
+// ============================================================
+const uid = () => Math.random().toString(36).slice(2, 10);
+
+function esc(str) {
+  return String(str ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function skey(studentId, subjectId, cat) {
+  return `${studentId}|${subjectId}|${cat}`;
+}
+
+function gradeFor(pct, boundaries) {
+  if (pct === null || pct === undefined) return null;
+  const sorted = [...boundaries].sort((a, b) => b.min - a.min);
+  return sorted.find((b) => pct >= b.min && pct <= b.max) || null;
+}
+
+function ordinalSuffix(n) {
+  const j = n % 10, k = n % 100;
+  if (j === 1 && k !== 11) return "st";
+  if (j === 2 && k !== 12) return "nd";
+  if (j === 3 && k !== 13) return "rd";
+  return "th";
+}
+
+function colLetter(n) {
+  let s = "";
+  n = n + 1;
+  while (n > 0) {
+    const rem = (n - 1) % 26;
+    s = String.fromCharCode(65 + rem) + s;
+    n = Math.floor((n - 1) / 26);
+  }
+  return s;
+}
+
+// ============================================================
+// Firebase setup (Auth + Firestore back this app in the cloud)
+// ============================================================
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const FIREBASE_CONFIG_KEY = "gb_firebase_config";
+
+let fbApp = null, auth = null, db = null;
+
+function getSavedFirebaseConfig() {
+  try {
+    const raw = localStorage.getItem(FIREBASE_CONFIG_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+
+function saveFirebaseConfig(cfg) {
+  localStorage.setItem(FIREBASE_CONFIG_KEY, JSON.stringify(cfg));
+}
+
+function clearFirebaseConfig() {
+  localStorage.removeItem(FIREBASE_CONFIG_KEY);
+}
+
+function initFirebase(cfg) {
+  if (typeof firebase === "undefined") {
+    throw new Error("The Firebase SDK didn't load (check your internet connection, then reload the page).");
+  }
+  fbApp = firebase.initializeApp(cfg);
+  auth = firebase.auth();
+  db = firebase.firestore();
+}
+
+function randomToken() {
+  const bytes = new Uint8Array(16);
+  (window.crypto || window.msCrypto).getRandomValues(bytes);
+  return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// ============================================================
+// gradebook data model
+// ============================================================
+const DEFAULT_SUBJECTS = [
+  { id: uid(), name: "Maths" },
+  { id: uid(), name: "English" },
+  { id: uid(), name: "Economics" },
+];
+const DEFAULT_BOUNDARIES = [
+  { id: uid(), label: "A", min: 80, max: 100, remark: "Excellent", color: "#107C41" },
+  { id: uid(), label: "B", min: 70, max: 79, remark: "Very Good", color: "#3D8B4C" },
+  { id: uid(), label: "C", min: 60, max: 69, remark: "Good", color: "#C99A3E" },
+  { id: uid(), label: "D", min: 50, max: 59, remark: "Fair", color: "#C9743E" },
+  { id: uid(), label: "F", min: 0, max: 49, remark: "Fail", color: "#C0392B" },
+];
+
+function emptyData() {
+  return {
+    schoolName: "",
+    subjects: DEFAULT_SUBJECTS.map((s) => ({ ...s })),
+    ca1Max: 20,
+    ca2Max: 20,
+    examMax: 60,
+    students: [],
+    scores: {},
+    boundaries: DEFAULT_BOUNDARIES.map((b) => ({ ...b })),
+    reportLinks: {}, // studentId -> public share token
+  };
+}
+
+// ============================================================
+// app state
+// ============================================================
+const State = {
+  firebaseConfigured: false,
+  firebaseSetupError: "",
+  firebaseSetupBusy: false,
+
+  user: null,           // { email, name, uid }
+  authChecked: false,
+  authView: "login",     // 'login' | 'register'
+  authBusy: false,
+  authError: "",
+  confirmMismatch: false,
+
+  data: null,
+  loaded: false,
+  bottomSheet: "scores", // 'scores' | 'setup' | 'reports'
+  view: "ca1",            // 'ca1' | 'ca2' | 'exam' | 'result'
+  saveState: "idle",
+  searchQuery: "",
+  sortBy: "default",     // 'default' | 'name-asc' | 'name-desc' | 'position-asc' | 'position-desc'
+
+  online: (typeof navigator !== "undefined" ? navigator.onLine : true),
+  exportMenuOpen: false,
+  reportModal: null,     // null | { type: 'single', studentId } | { type: 'all' }
+  linkCopiedFor: null,   // studentId, briefly shown as "Link copied!"
+
+  publicReport: null,    // set when the page is opened via a shared report link
+};
+
+const AuthForm = { email: "", password: "", confirm: "", name: "" };
+
+// ============================================================
+// derived calculations
+// ============================================================
+function subjectValue(studentId, subjectId, v) {
+  const d = State.data;
+  if (v === "ca1" || v === "ca2" || v === "exam") return d.scores[skey(studentId, subjectId, v)];
+  const ca1 = d.scores[skey(studentId, subjectId, "ca1")];
+  const ca2 = d.scores[skey(studentId, subjectId, "ca2")];
+  const exam = d.scores[skey(studentId, subjectId, "exam")];
+  if (ca1 === undefined && ca2 === undefined && exam === undefined) return undefined;
+  return (ca1 || 0) + (ca2 || 0) + (exam || 0);
+}
+
+function subjectMaxFor(v) {
+  const d = State.data;
+  if (v === "ca1") return d.ca1Max;
+  if (v === "ca2") return d.ca2Max;
+  if (v === "exam") return d.examMax;
+  return d.ca1Max + d.ca2Max + d.examMax;
+}
+
+function rowStats(studentId, v) {
+  const perSubjMax = subjectMaxFor(v);
+  let total = 0, count = 0;
+  State.data.subjects.forEach((sub) => {
+    const val = subjectValue(studentId, sub.id, v);
+    if (val !== undefined) { total += val; count += 1; }
+  });
+  if (count === 0) return { total: null, pct: null, average: null, grade: null };
+  const pct = perSubjMax > 0 ? (total / (count * perSubjMax)) * 100 : null;
+  const average = total / count;
+  const grade = pct !== null ? gradeFor(pct, State.data.boundaries) : null;
+  return { total, pct, average, grade };
+}
+
+function computePositions(v) {
+  const withPct = State.data.students
+    .map((s) => ({ id: s.id, pct: rowStats(s.id, v).pct }))
+    .filter((s) => s.pct !== null)
+    .sort((a, b) => b.pct - a.pct);
+  const out = {};
+  let rank = 0, lastPct = null, seen = 0;
+  withPct.forEach((s) => {
+    seen += 1;
+    if (s.pct !== lastPct) { rank = seen; lastPct = s.pct; }
+    out[s.id] = rank;
+  });
+  return out;
+}
+
+function computeColumnStats(v) {
+  const out = {};
+  State.data.subjects.forEach((sub) => {
+    const vals = State.data.students.map((s) => subjectValue(s.id, sub.id, v)).filter((x) => x !== undefined);
+    out[sub.id] = vals.length ? { max: Math.max(...vals), min: Math.min(...vals) } : { max: null, min: null };
+  });
+  return out;
+}
+
+function computeTotalStats(v) {
+  const vals = State.data.students.map((s) => rowStats(s.id, v).total).filter((x) => x !== null && x !== undefined);
+  return vals.length ? { max: Math.max(...vals), min: Math.min(...vals) } : { max: null, min: null };
+}
+
+function buildReportData(studentId) {
+  const d = State.data;
+  const student = d.students.find((s) => s.id === studentId);
+  if (!student) return null;
+  const perSubjMax = d.ca1Max + d.ca2Max + d.examMax;
+  const subjects = d.subjects.map((sub) => {
+    const ca1 = subjectValue(studentId, sub.id, "ca1");
+    const ca2 = subjectValue(studentId, sub.id, "ca2");
+    const exam = subjectValue(studentId, sub.id, "exam");
+    const total = subjectValue(studentId, sub.id, "result");
+    const pct = total !== undefined && perSubjMax > 0 ? (total / perSubjMax) * 100 : null;
+    const grade = pct !== null ? gradeFor(pct, d.boundaries) : null;
+    return { name: sub.name, ca1, ca2, exam, total, grade };
+  });
+  const overall = rowStats(studentId, "result");
+  const positions = computePositions("result");
+  const position = positions[studentId] || null;
+  const totalStudents = d.students.filter((s) => rowStats(s.id, "result").pct !== null).length;
+  return { student, subjects, overall, position, totalStudents, ca1Max: d.ca1Max, ca2Max: d.ca2Max, examMax: d.examMax };
+}
+
+// ============================================================
+// public report links (shareable, read-only, single-student)
+// ============================================================
+async function copyReportLink(studentId) {
+  const reportData = buildReportData(studentId);
+  if (!reportData) return;
+  let token = State.data.reportLinks[studentId];
+  if (!token) {
+    token = randomToken();
+    State.data.reportLinks[studentId] = token;
+    scheduleSave();
+  }
+  try {
+    // snapshot only this student's report — the public page can never see anyone else's data
+    await db.collection("publicReports").doc(token).set({
+      ...reportData,
+      ownerUid: State.user.uid,
+      generatedAt: Date.now(),
+    });
+    const url = `${location.origin}${location.pathname}?report=${token}`;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(url);
+    } else {
+      window.prompt("Copy this link:", url);
+    }
+    State.linkCopiedFor = studentId;
+    renderMainApp();
+    setTimeout(() => {
+      if (State.linkCopiedFor === studentId) { State.linkCopiedFor = null; renderMainApp(); }
+    }, 2200);
+  } catch (e) {
+    alert("Couldn't generate the link right now. Please check your connection and try again.");
+  }
+}
+
+// ============================================================
+// mutators
+// ============================================================
+function setSchoolName(val) { State.data.schoolName = val; }
+
+function addSubject() { State.data.subjects.push({ id: uid(), name: "New Subject" }); }
+function updateSubjectName(id, name) { const s = State.data.subjects.find((x) => x.id === id); if (s) s.name = name; }
+function removeSubject(id) { State.data.subjects = State.data.subjects.filter((s) => s.id !== id); }
+
+function addStudent() { State.data.students.push({ id: uid(), name: "" }); }
+function updateStudentName(id, name) { const s = State.data.students.find((x) => x.id === id); if (s) s.name = name; }
+function removeStudent(id) { State.data.students = State.data.students.filter((s) => s.id !== id); }
+
+function setScore(studentId, subjectId, cat, raw) {
+  const key = skey(studentId, subjectId, cat);
+  if (raw === "") delete State.data.scores[key];
+  else State.data.scores[key] = Math.max(0, Number(raw));
+}
+
+function setCa1Max(val) { State.data.ca1Max = Math.max(0, Number(val) || 0); }
+function setCa2Max(val) { State.data.ca2Max = Math.max(0, Number(val) || 0); }
+function setExamMax(val) { State.data.examMax = Math.max(0, Number(val) || 0); }
+
+function addBoundary() { State.data.boundaries.push({ id: uid(), label: "", min: 0, max: 0, remark: "", color: "#5B6B77" }); }
+function updateBoundary(id, patch) { const b = State.data.boundaries.find((x) => x.id === id); if (b) Object.assign(b, patch); }
+function removeBoundary(id) { State.data.boundaries = State.data.boundaries.filter((b) => b.id !== id); }
+
+function resetAll() {
+  if (!confirm("Clear all data? This cannot be undone.")) return;
+  State.data = emptyData();
+  scheduleSave();
+  renderMainApp();
+}
+
+// ============================================================
+// persistence
+// ============================================================
+let saveTimer = null;
+function scheduleSave() {
+  setSaveState("saving");
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    try {
+      await db.collection("gradebooks").doc(State.user.uid).set(State.data);
+      setSaveState("saved");
+    } catch (e) {
+      setSaveState("error");
+    }
+  }, 400);
+}
+
+function setSaveState(s) {
+  State.saveState = s;
+  const dot = document.getElementById("save-dot");
+  const text = document.getElementById("save-text-msg");
+  if (dot) dot.style.background = s === "saving" ? "#F2C744" : s === "error" ? "#C0392B" : "#8FD19E";
+  if (text) text.textContent = s === "saving" ? "Saving…" : s === "error" ? "Save failed — check connection" : "Saved to cloud";
+}
+
+async function loadUserData() {
+  try {
+    const doc = await db.collection("gradebooks").doc(State.user.uid).get();
+    State.data = doc.exists ? doc.data() : emptyData();
+    if (State.data && State.data.schoolName === undefined) State.data.schoolName = "";
+    if (State.data && State.data.reportLinks === undefined) State.data.reportLinks = {};
+  } catch (e) {
+    State.data = emptyData();
+  }
+  State.loaded = true;
+}
+
+// ============================================================
+// backup / export / import — data now lives in Firestore, but
+// a downloadable backup file is still handy as an offline copy.
+// ============================================================
+function dateStamp() { return new Date().toISOString().slice(0, 10); }
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 0);
+}
+
+function exportBackupJSON() {
+  const payload = { app: "r-gradebook-backup", version: 1, exportedAt: new Date().toISOString(), user: State.user.email, data: State.data };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  downloadBlob(blob, `r-gradebook-backup-${dateStamp()}.json`);
+  closeExportMenu();
+}
+
+function csvEscape(val) {
+  const s = String(val ?? "");
+  if (/[",\r\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+function exportCSV() {
+  const d = State.data;
+  const v = State.bottomSheet === "scores" ? State.view : "result";
+  const positions = computePositions(v);
+  const rows = [["#", "Name", ...d.subjects.map((s) => s.name), "Total", "%", "Average", "Grade", "Remarks", "Position"]];
+  d.students.forEach((student, i) => {
+    const stat = rowStats(student.id, v);
+    const pos = positions[student.id];
+    const row = [i + 1, student.name];
+    d.subjects.forEach((sub) => { const val = subjectValue(student.id, sub.id, v); row.push(val === undefined ? "" : val); });
+    row.push(
+      stat.total ?? "",
+      stat.pct !== null ? stat.pct.toFixed(1) : "",
+      stat.average !== null ? stat.average.toFixed(1) : "",
+      stat.grade ? stat.grade.label : "",
+      stat.grade ? stat.grade.remark : "",
+      pos ? `${pos}${ordinalSuffix(pos)}` : ""
+    );
+    rows.push(row);
+  });
+  const csv = rows.map((r) => r.map(csvEscape).join(",")).join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  downloadBlob(blob, `r-gradebook-${v}-${dateStamp()}.csv`);
+  closeExportMenu();
+}
+
+function handleImportFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      const incoming = parsed && parsed.data ? parsed.data : parsed;
+      if (!incoming || !Array.isArray(incoming.students) || !Array.isArray(incoming.subjects)) {
+        alert("This file doesn't look like a valid R-Gradebook backup.");
+        return;
+      }
+      if (!confirm("Import this backup? It will replace all data currently in this gradebook.")) return;
+      if (incoming.schoolName === undefined) incoming.schoolName = "";
+      if (incoming.reportLinks === undefined) incoming.reportLinks = {};
+      State.data = incoming;
+      scheduleSave();
+      closeExportMenu();
+      renderMainApp();
+    } catch (err) {
+      alert("Couldn't read that file. Make sure it's an R-Gradebook backup (.json) file.");
+    }
+  };
+  reader.readAsText(file);
+}
+
+function toggleExportMenu() { State.exportMenuOpen = !State.exportMenuOpen; renderTitleRightOnly(); }
+function closeExportMenu() { if (State.exportMenuOpen) { State.exportMenuOpen = false; renderTitleRightOnly(); } }
+
+function updateOnlineBadge() {
+  State.online = navigator.onLine;
+  renderTitleRightOnly();
+}
+
+// ============================================================
+// auth actions
+// ============================================================
+function setAuthBusy(v) { State.authBusy = v; renderAuthScreen(); }
+function setAuthError(msg) { State.authError = msg; State.confirmMismatch = false; renderAuthScreen(); }
+function clearAuthError() { State.authError = ""; State.confirmMismatch = false; }
+
+function friendlyAuthError(code, fallback) {
+  const map = {
+    "auth/email-already-in-use": "An account with this email already exists — try logging in.",
+    "auth/invalid-email": "Enter a valid email address.",
+    "auth/weak-password": "Password must be at least 6 characters.",
+    "auth/user-not-found": "No account found with this email — register below.",
+    "auth/wrong-password": "Incorrect password.",
+    "auth/invalid-credential": "Incorrect email or password.",
+    "auth/too-many-requests": "Too many attempts. Please wait a moment and try again.",
+    "auth/network-request-failed": "Network error — check your connection and try again.",
+  };
+  return map[code] || fallback;
+}
+
+async function doRegister(email, password, name) {
+  clearAuthError();
+  const cleanEmail = (email || "").trim().toLowerCase();
+  if (!EMAIL_RE.test(cleanEmail)) return setAuthError("Enter a valid email address.");
+  if (!password || password.length < 6) return setAuthError("Password must be at least 6 characters.");
+  setAuthBusy(true);
+  const timeout = (ms) => new Promise((_, rej) => setTimeout(() => rej(new Error("Timed out reaching Firebase — this browser may be blocking the connection. Try Chrome or another standard browser.")), ms));
+  try {
+    const cred = await Promise.race([auth.createUserWithEmailAndPassword(cleanEmail, password), timeout(12000)]);
+    const displayName = (name || "").trim() || cleanEmail.split("@")[0];
+    try { await Promise.race([cred.user.updateProfile({ displayName }), timeout(6000)]); } catch (e) { /* non-fatal */ }
+    State.user = { email: cleanEmail, name: displayName, uid: cred.user.uid };
+    await loadUserData();
+    render();
+  } catch (e) {
+    setAuthError(friendlyAuthError(e && e.code, e && e.message ? e.message : "Something went wrong creating your account. Please try again."));
+  } finally {
+    State.authBusy = false;
+    renderAuthScreen();
+  }
+}
+
+async function doLogin(email, password) {
+  clearAuthError();
+  const cleanEmail = (email || "").trim().toLowerCase();
+  if (!cleanEmail || !password) return setAuthError("Enter your email and password.");
+  setAuthBusy(true);
+  const timeout = (ms) => new Promise((_, rej) => setTimeout(() => rej(new Error("Timed out reaching Firebase — this browser may be blocking the connection. Try Chrome or another standard browser.")), ms));
+  try {
+    const cred = await Promise.race([auth.signInWithEmailAndPassword(cleanEmail, password), timeout(12000)]);
+    State.user = { email: cleanEmail, name: cred.user.displayName || cleanEmail.split("@")[0], uid: cred.user.uid };
+    await loadUserData();
+    render();
+  } catch (e) {
+    setAuthError(friendlyAuthError(e && e.code, e && e.message ? e.message : "Something went wrong logging in. Please try again."));
+  } finally {
+    State.authBusy = false;
+    renderAuthScreen();
+  }
+}
+
+async function doLogout() {
+  try { await auth.signOut(); } catch (e) { /* ignore */ }
+  State.user = null;
+  State.data = null;
+  State.loaded = false;
+  State.view = "ca1";
+  State.bottomSheet = "scores";
+  State.searchQuery = "";
+  State.sortBy = "default";
+  State.reportModal = null;
+  State.exportMenuOpen = false;
+  render();
+}
+
+function switchAuthView(v) {
+  AuthForm.password = "";
+  AuthForm.confirm = "";
+  State.authView = v;
+  clearAuthError();
+  renderAuthScreen();
+}
+
+async function submitAuthForm() {
+  if (State.authBusy) return;
+  if (State.authView === "login") {
+    await doLogin(AuthForm.email, AuthForm.password);
+  } else {
+    if (AuthForm.password !== AuthForm.confirm) {
+      clearAuthError();
+      State.confirmMismatch = true;
+      renderAuthScreen();
+      return;
+    }
+    await doRegister(AuthForm.email, AuthForm.password, AuthForm.name);
+  }
+}
+
+// ============================================================
+// rendering
+// ============================================================
+const root = document.getElementById("root");
+
+function render() {
+  if (!State.authChecked) { root.innerHTML = loadingHTML("Loading…"); return; }
+  if (!State.user) { renderAuthScreen(); return; }
+  if (!State.loaded || !State.data) { root.innerHTML = loadingHTML("Loading gradebook…"); return; }
+  renderMainApp();
+}
+
+function loadingHTML(msg) {
+  return `<div class="loading">${esc(msg)}</div>`;
+}
+
+// ---------- firebase setup screen (first run only) ----------
+const FirebaseSetupForm = { text: "" };
+
+function renderFirebaseSetupScreen() {
+  root.innerHTML = `
+    <div class="auth-wrap">
+      <div class="auth-card setup-card">
+        <div class="auth-header">
+          <div class="logo-box">R</div>
+          <span class="auth-title">R-Gradebook</span>
+        </div>
+        <div class="auth-subtitle">Connect this app to your Firebase project so your gradebook is saved to the cloud.</div>
+        <div class="setup-steps">
+          <b>One-time setup:</b>
+          <ol>
+            <li>Go to <a href="https://console.firebase.google.com" target="_blank" rel="noopener">console.firebase.google.com</a> and create a project (free).</li>
+            <li>In the project, click "Build → Authentication" → Sign-in method → enable <b>Email/Password</b>.</li>
+            <li>Click "Build → Firestore Database" → Create database (start in production mode).</li>
+            <li>Click the ⚙ gear → Project settings → scroll to "Your apps" → add a Web app.</li>
+            <li>Copy the <code>firebaseConfig</code> object it gives you and paste it below.</li>
+          </ol>
+        </div>
+        <div class="auth-form">
+          <label class="auth-label">Paste your firebaseConfig object
+            <textarea class="auth-textarea" data-bind="firebase-config-text" placeholder='{
+  "apiKey": "...",
+  "authDomain": "...",
+  "projectId": "...",
+  "storageBucket": "...",
+  "messagingSenderId": "...",
+  "appId": "..."
+}'>${esc(FirebaseSetupForm.text)}</textarea>
+          </label>
+          ${State.firebaseSetupError ? `<div class="auth-error">${esc(State.firebaseSetupError)}</div>` : ""}
+          <button type="button" class="auth-submit-btn" data-action="firebase-setup-submit" ${State.firebaseSetupBusy ? "disabled" : ""}>
+            ${State.firebaseSetupBusy ? "Connecting…" : "Connect"}
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function submitFirebaseSetup() {
+  if (State.firebaseSetupBusy) return;
+  State.firebaseSetupError = "";
+  let cfg;
+  try {
+    cfg = JSON.parse(FirebaseSetupForm.text);
+  } catch (e) {
+    // allow pasting the raw `const firebaseConfig = {...};` snippet too
+    try {
+      const match = FirebaseSetupForm.text.match(/\{[\s\S]*\}/);
+      cfg = match ? Function('"use strict";return (' + match[0] + ")")() : null;
+    } catch (e2) { cfg = null; }
+  }
+  if (!cfg || !cfg.apiKey || !cfg.projectId) {
+    State.firebaseSetupError = "That doesn't look like a valid firebaseConfig object. Make sure it includes apiKey and projectId.";
+    renderFirebaseSetupScreen();
+    return;
+  }
+  State.firebaseSetupBusy = true;
+  renderFirebaseSetupScreen();
+  const timeout = (ms) => new Promise((_, rej) => setTimeout(() => rej(new Error("Timed out — check your internet connection and try again.")), ms));
+  try {
+    initFirebase(cfg);
+    // best-effort persistence — some locked-down browsers block storage for
+    // local files, so don't let that hang the whole connection process
+    try {
+      await Promise.race([auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL), timeout(4000)]);
+    } catch (persistErr) { /* non-fatal: continue without persistence */ }
+    saveFirebaseConfig(cfg);
+    State.firebaseConfigured = true;
+    State.firebaseSetupBusy = false;
+    bootstrap();
+  } catch (e) {
+    State.firebaseSetupBusy = false;
+    State.firebaseSetupError = "Couldn't connect: " + (e && e.message ? e.message : "unknown error") + ". Double-check the config values.";
+    renderFirebaseSetupScreen();
+  }
+}
+
+// ---------- public (shared) report link screen ----------
+async function loadPublicReport(token) {
+  root.innerHTML = loadingHTML("Loading report…");
+  try {
+    const doc = await db.collection("publicReports").doc(token).get();
+    if (!doc.exists) {
+      root.innerHTML = `<div class="public-report-wrap"><div class="notice" style="max-width:520px;margin:40px auto">This report link is invalid or has expired. Ask your teacher to share a fresh link.</div></div>`;
+      return;
+    }
+    State.publicReport = doc.data();
+    renderPublicReportScreen();
+  } catch (e) {
+    root.innerHTML = `<div class="public-report-wrap"><div class="notice" style="max-width:520px;margin:40px auto">Couldn't load this report right now. Please try again shortly.</div></div>`;
+  }
+}
+
+function renderPublicReportScreen() {
+  root.innerHTML = `
+    <div class="public-report-wrap">
+      <div class="public-report-toolbar">
+        <button class="title-btn" style="background:#A6790C;border-color:#A6790C;color:#fff" data-action="print-report">🖶 Print</button>
+      </div>
+      <div class="public-report-card">${renderReportCardSheet(State.publicReport)}</div>
+    </div>
+  `;
+}
+
+// ---------- auth screen ----------
+function renderAuthScreen() {
+  const v = State.authView;
+  root.innerHTML = `
+    <div class="auth-wrap">
+      <div class="auth-card">
+        <div class="auth-header">
+          <div class="logo-box">R</div>
+          <span class="auth-title">R-Gradebook</span>
+        </div>
+        <div class="auth-subtitle">${v === "login" ? "Log in to access your gradebook." : "Create an account to get started."}</div>
+        <div class="auth-form">
+          ${v === "register" ? `
+          <label class="auth-label">Name
+            <input class="auth-input" type="text" data-bind="auth-name" value="${esc(AuthForm.name)}" placeholder="Your name" autocomplete="name" />
+          </label>` : ""}
+          <label class="auth-label">Email
+            <input class="auth-input" type="email" data-bind="auth-email" value="${esc(AuthForm.email)}" placeholder="you@example.com" autocomplete="email" />
+          </label>
+          <label class="auth-label">Password
+            <input class="auth-input" type="password" data-bind="auth-password" value="${esc(AuthForm.password)}" placeholder="${v === "register" ? "At least 6 characters" : "Your password"}" autocomplete="${v === "register" ? "new-password" : "current-password"}" />
+          </label>
+          ${v === "register" ? `
+          <label class="auth-label">Confirm password
+            <input class="auth-input" type="password" data-bind="auth-confirm" value="${esc(AuthForm.confirm)}" placeholder="Re-enter password" autocomplete="new-password" />
+          </label>` : ""}
+          ${(State.authError || State.confirmMismatch) ? `<div class="auth-error">${State.confirmMismatch ? "Passwords don't match." : esc(State.authError)}</div>` : ""}
+          <button type="button" class="auth-submit-btn" data-action="auth-submit" ${State.authBusy ? "disabled" : ""}>
+            ${State.authBusy ? "Please wait…" : v === "login" ? "Log in" : "Create account"}
+          </button>
+        </div>
+        <div class="auth-switch">
+          ${v === "login"
+            ? `Don't have an account? <button class="auth-link-btn" data-action="auth-switch" data-view="register">Register</button>`
+            : `Already have an account? <button class="auth-link-btn" data-action="auth-switch" data-view="login">Log in</button>`}
+        </div>
+      </div>
+    </div>
+  `;
+  const first = root.querySelector(".auth-input");
+  // don't steal focus on every keystroke re-render; only focus on view switches
+}
+
+// ---------- main app ----------
+function titleRightHTML() {
+  return `
+    <span id="online-badge" class="online-badge ${State.online ? "online" : "offline"}">${State.online ? "● Online" : "● Offline"}</span>
+    <span class="save-text"><span id="save-dot" class="save-dot"></span><span id="save-text-msg">Saved to cloud</span></span>
+    <span class="user-text">${esc(State.user.name)}</span>
+    <div class="export-wrap" id="export-wrap">
+      <button class="title-btn" data-action="toggle-export-menu">Export ▾</button>
+      ${State.exportMenuOpen ? `
+      <div class="export-menu">
+        <button class="export-menu-item" data-action="export-json">⬇ Download backup (.json)</button>
+        <button class="export-menu-item" data-action="trigger-import">⬆ Restore backup (.json)</button>
+        <div class="export-menu-divider"></div>
+        <button class="export-menu-item" data-action="export-csv">⬇ Export current sheet (.csv)</button>
+        <button class="export-menu-item" data-action="print-all-reports">🖶 Print all report cards</button>
+      </div>` : ""}
+      <input type="file" id="import-file-input" data-action="import-file" accept="application/json" style="display:none" />
+    </div>
+    <button class="title-btn" data-action="reset-all">Clear all</button>
+    <button class="title-btn" data-action="logout">Log out</button>
+  `;
+}
+
+function renderTitleRightOnly() {
+  const el = document.getElementById("title-right");
+  if (el) el.innerHTML = titleRightHTML();
+}
+
+function renderMainApp() {
+  root.innerHTML = `
+    <div class="app">
+      <div class="title-bar">
+        <div class="title-left">
+          <div class="logo-box">R</div>
+          <span class="title-text">R-Gradebook</span>
+        </div>
+        <div class="title-right" id="title-right">${titleRightHTML()}</div>
+      </div>
+      <div class="body-area">
+        ${State.bottomSheet === "scores" ? renderScoresTab() : State.bottomSheet === "setup" ? renderSetupTab() : renderReportCardsTab()}
+      </div>
+      <div class="sheet-tab-bar">
+        <button class="sheet-tab ${State.bottomSheet === "scores" ? "active" : ""}" data-action="set-sheet" data-sheet="scores">Scores</button>
+        <button class="sheet-tab ${State.bottomSheet === "setup" ? "active" : ""}" data-action="set-sheet" data-sheet="setup">Setup</button>
+        <button class="sheet-tab ${State.bottomSheet === "reports" ? "active" : ""}" data-action="set-sheet" data-sheet="reports">Report Cards</button>
+      </div>
+    </div>
+    ${State.reportModal ? renderReportModal() : ""}
+  `;
+}
+
+function renderScoresTab() {
+  const items = [
+    { id: "ca1", label: "1st C.A" },
+    { id: "ca2", label: "2nd C.A" },
+    { id: "exam", label: "Exam" },
+    { id: "result", label: "Result" },
+  ];
+  const hint = { ca1: "1st continuous assessment test", ca2: "2nd continuous assessment test", exam: "Exam scores", result: "1st C.A + 2nd C.A + Exam combined" }[State.view];
+  return `
+    <div class="pill-row">
+      ${items.map((it) => `<button class="pill ${State.view === it.id ? "active" : ""}" data-action="set-view" data-view="${it.id}">${it.label}</button>`).join("")}
+      <span class="pill-hint">${hint}</span>
+      <select class="sort-select" data-bind="sort-by" title="Sort / filter students">
+        <option value="default" ${State.sortBy === "default" ? "selected" : ""}>Sort: Entry order</option>
+        <option value="name-asc" ${State.sortBy === "name-asc" ? "selected" : ""}>Sort: Name (A → Z)</option>
+        <option value="name-desc" ${State.sortBy === "name-desc" ? "selected" : ""}>Sort: Name (Z → A)</option>
+        <option value="position-asc" ${State.sortBy === "position-asc" ? "selected" : ""}>Sort: Position (1st → last)</option>
+        <option value="position-desc" ${State.sortBy === "position-desc" ? "selected" : ""}>Sort: Position (last → 1st)</option>
+      </select>
+      <div class="search-box">
+        <span class="search-icon">⌕</span>
+        <input class="search-input" type="text" data-bind="search-query" value="${esc(State.searchQuery)}" placeholder="Search student…" />
+        ${State.searchQuery ? `<button class="search-clear-btn" data-action="clear-search" title="Clear search">×</button>` : ""}
+      </div>
+    </div>
+    <div id="scores-container">${scoresTableHTML()}</div>
+  `;
+}
+
+function scoresTableHTML() {
+  const d = State.data;
+  if (d.subjects.length === 0) {
+    return `<div class="notice">Go to the <b>Setup</b> tab (bottom) to add subjects first.</div>`;
+  }
+  const view = State.view;
+  const editable = view === "ca1" || view === "ca2" || view === "exam";
+  const subjectMax = subjectMaxFor(view);
+  const colCount = 2 + d.subjects.length + 6;
+  const q = (State.searchQuery || "").trim().toLowerCase();
+  let visible = q ? d.students.filter((s) => s.name.toLowerCase().includes(q)) : d.students.slice();
+  const positions = computePositions(view);
+  const cstats = computeColumnStats(view);
+
+  // sort/filter — the Position column itself always reflects true class rank
+  // (computed above from the full roster), regardless of display order.
+  const sortBy = State.sortBy || "default";
+  if (sortBy === "name-asc") {
+    visible = visible.slice().sort((a, b) => a.name.localeCompare(b.name));
+  } else if (sortBy === "name-desc") {
+    visible = visible.slice().sort((a, b) => b.name.localeCompare(a.name));
+  } else if (sortBy === "position-asc" || sortBy === "position-desc") {
+    const rankOf = (s) => positions[s.id] ?? Infinity; // students with no score yet sort last
+    visible = visible.slice().sort((a, b) => {
+      const diff = rankOf(a) - rankOf(b);
+      return sortBy === "position-asc" ? diff : -diff;
+    });
+  }
+
+  let html = `<div class="grid-scroll"><table class="sheet-table"><thead><tr>`;
+  for (let i = 0; i < colCount; i++) html += `<th class="col-letter-cell">${colLetter(i)}</th>`;
+  html += `</tr><tr>
+      <th class="header-cell">#</th>
+      <th class="header-cell" style="text-align:left">Name</th>
+      ${d.subjects.map((sub) => `<th class="header-cell">${esc(sub.name)}<div class="header-sub">/${subjectMax}</div></th>`).join("")}
+      <th class="header-cell">Total</th>
+      <th class="header-cell">%</th>
+      <th class="header-cell">Average</th>
+      <th class="header-cell">Grade</th>
+      <th class="header-cell">Remarks</th>
+      <th class="header-cell">Position</th>
+    </tr></thead><tbody>`;
+
+  if (q && visible.length === 0) {
+    html += `<tr><td colspan="${colCount}" class="data-cell" style="text-align:left;color:#80868B;padding:10px 8px">No student matches "${esc(State.searchQuery)}".</td></tr>`;
+  }
+
+  visible.forEach((student, rIdx) => {
+    const stat = rowStats(student.id, view);
+    const pos = positions[student.id];
+    html += `<tr class="${rIdx % 2 === 1 ? "alt-row" : ""}">
+      <td class="row-num-cell">${rIdx + 1}</td>
+      <td class="name-cell"><div class="name-cell-inner">
+        <input class="name-input" data-bind="student-name" data-id="${student.id}" value="${esc(student.name)}" placeholder="Student name" />
+        <button class="row-remove-btn" data-action="remove-student" data-id="${student.id}" title="Remove student">×</button>
+      </div></td>
+      ${d.subjects.map((sub) => {
+        const val = subjectValue(student.id, sub.id, view);
+        if (editable) {
+          return `<td class="input-cell"><input class="score-input" type="number" min="0" max="${subjectMax}" data-bind="score" data-student="${student.id}" data-subject="${sub.id}" value="${val === undefined ? "" : val}" /></td>`;
+        }
+        return `<td class="data-cell">${val === undefined || val === null ? "" : val}</td>`;
+      }).join("")}
+      <td class="data-cell" id="stat-total-${student.id}" style="font-weight:600">${stat.total ?? ""}</td>
+      <td class="data-cell" id="stat-pct-${student.id}">${stat.pct !== null ? stat.pct.toFixed(1) : ""}</td>
+      <td class="data-cell" id="stat-avg-${student.id}">${stat.average !== null ? stat.average.toFixed(1) : ""}</td>
+      <td class="data-cell" id="stat-grade-${student.id}">${stat.grade ? `<span style="color:${stat.grade.color};font-weight:700">${esc(stat.grade.label)}</span>` : ""}</td>
+      <td class="data-cell" id="stat-remark-${student.id}" style="text-align:left;color:#5F6368">${esc(stat.grade?.remark ?? "")}</td>
+      <td class="data-cell" id="stat-pos-${student.id}" style="font-weight:700;color:#A6790C">${pos ? `${pos}${ordinalSuffix(pos)}` : ""}</td>
+    </tr>`;
+  });
+
+  if (!q) {
+    html += `<tr>
+      <td class="row-num-cell">${d.students.length + 1}</td>
+      <td class="name-cell"><button class="add-row-btn" data-action="add-student">+ Add student</button></td>
+      <td colspan="${d.subjects.length + 6}"></td>
+    </tr>`;
+  }
+
+  html += `</tbody></table></div>`;
+
+  if (d.students.length > 0) {
+    const labelMap = { ca1: "1st C.A", ca2: "2nd C.A", exam: "Exam", result: "Result" };
+    const totalStats = computeTotalStats(view);
+    html += `<div class="class-stats-box">
+      <div class="class-stats-title">Class stats — ${labelMap[view]}</div>
+      <div class="class-stats-grid" id="class-stats-values">
+        <div class="class-stats-item"><span class="class-stats-subj" style="color:#A6790C">Total</span><span class="class-stats-vals">max ${totalStats.max ?? "—"} · min ${totalStats.min ?? "—"}</span></div>
+        ${d.subjects.map((sub) => {
+          const cs = cstats[sub.id] || {};
+          return `<div class="class-stats-item"><span class="class-stats-subj">${esc(sub.name)}</span><span class="class-stats-vals">max ${cs.max ?? "—"} · min ${cs.min ?? "—"}</span></div>`;
+        }).join("")}
+      </div>
+    </div>`;
+  }
+
+  return html;
+}
+
+function renderScoresContainerOnly() {
+  const c = document.getElementById("scores-container");
+  if (c) c.innerHTML = scoresTableHTML();
+}
+
+function patchRowStats() {
+  const view = State.view;
+  const positions = computePositions(view);
+  const cstats = computeColumnStats(view);
+  State.data.students.forEach((student) => {
+    const stat = rowStats(student.id, view);
+    const totalEl = document.getElementById(`stat-total-${student.id}`);
+    if (totalEl) totalEl.textContent = stat.total ?? "";
+    const pctEl = document.getElementById(`stat-pct-${student.id}`);
+    if (pctEl) pctEl.textContent = stat.pct !== null ? stat.pct.toFixed(1) : "";
+    const avgEl = document.getElementById(`stat-avg-${student.id}`);
+    if (avgEl) avgEl.textContent = stat.average !== null ? stat.average.toFixed(1) : "";
+    const gradeEl = document.getElementById(`stat-grade-${student.id}`);
+    if (gradeEl) gradeEl.innerHTML = stat.grade ? `<span style="color:${stat.grade.color};font-weight:700">${esc(stat.grade.label)}</span>` : "";
+    const remarkEl = document.getElementById(`stat-remark-${student.id}`);
+    if (remarkEl) remarkEl.textContent = stat.grade?.remark ?? "";
+    const posEl = document.getElementById(`stat-pos-${student.id}`);
+    if (posEl) { const p = positions[student.id]; posEl.textContent = p ? `${p}${ordinalSuffix(p)}` : ""; }
+  });
+  const box = document.getElementById("class-stats-values");
+  if (box) {
+    const totalStats = computeTotalStats(view);
+    box.innerHTML = `<div class="class-stats-item"><span class="class-stats-subj" style="color:#A6790C">Total</span><span class="class-stats-vals">max ${totalStats.max ?? "—"} · min ${totalStats.min ?? "—"}</span></div>` +
+      State.data.subjects.map((sub) => {
+        const cs = cstats[sub.id] || {};
+        return `<div class="class-stats-item"><span class="class-stats-subj">${esc(sub.name)}</span><span class="class-stats-vals">max ${cs.max ?? "—"} · min ${cs.min ?? "—"}</span></div>`;
+      }).join("");
+  }
+}
+
+function renderReportCardsTab() {
+  const d = State.data;
+  if (d.students.length === 0) {
+    return `<div class="notice">Add students in the <b>Scores</b> tab first, then come back here to generate report cards.</div>`;
+  }
+  return `
+    <div class="pill-row">
+      <span class="pill-hint">Generate a printable report card for each student, or print them all at once.</span>
+      <button class="pill" style="margin-left:auto" data-action="print-all-reports">🖶 Print all report cards</button>
+    </div>
+    <div class="grid-scroll"><table class="sheet-table">
+      <thead>
+        <tr><th class="col-letter-cell">A</th><th class="col-letter-cell">B</th><th class="col-letter-cell">C</th></tr>
+        <tr><th class="header-cell" style="text-align:left">Student</th><th class="header-cell">Report card</th><th class="header-cell">Share link</th></tr>
+      </thead>
+      <tbody>
+        ${d.students.map((s, i) => `<tr class="${i % 2 === 1 ? "alt-row" : ""}">
+          <td class="data-cell" style="text-align:left">${esc(s.name || "(unnamed student)")}</td>
+          <td class="data-cell"><button class="add-row-btn" data-action="open-report" data-id="${s.id}">View / Print →</button></td>
+          <td class="data-cell"><button class="link-btn ${State.linkCopiedFor === s.id ? "copied" : ""}" data-action="copy-report-link" data-id="${s.id}">${State.linkCopiedFor === s.id ? "✓ Link copied" : "🔗 Copy link"}</button></td>
+        </tr>`).join("")}
+      </tbody>
+    </table></div>
+    <div class="pill-hint" style="margin-top:8px">A copied link opens a read-only page showing only that student's own result — nothing else in the gradebook.</div>
+  `;
+}
+
+function renderReportCardSheet(data) {
+  const { student, subjects, overall, position, totalStudents, ca1Max, ca2Max, examMax } = data;
+  return `
+    <div class="report-card-sheet">
+      <div class="report-header">
+        <div class="report-school-name">${esc(State.data.schoolName || "Student Report Card")}</div>
+        <div class="report-doc-title">Academic Performance Report</div>
+      </div>
+      <div class="report-student-row">
+        <div><span>Student: </span><b>${esc(student.name || "—")}</b></div>
+        <div><span>Date: </span><b>${esc(new Date().toLocaleDateString())}</b></div>
+      </div>
+      <table class="report-table">
+        <thead><tr>
+          <th>Subject</th><th>1st C.A<br>/${ca1Max}</th><th>2nd C.A<br>/${ca2Max}</th><th>Exam<br>/${examMax}</th><th>Total<br>/${ca1Max + ca2Max + examMax}</th><th>Grade</th>
+        </tr></thead>
+        <tbody>
+          ${subjects.map((s) => `<tr>
+            <td>${esc(s.name)}</td>
+            <td>${s.ca1 ?? "—"}</td>
+            <td>${s.ca2 ?? "—"}</td>
+            <td>${s.exam ?? "—"}</td>
+            <td><b>${s.total ?? "—"}</b></td>
+            <td>${s.grade ? `<span style="color:${s.grade.color};font-weight:700">${esc(s.grade.label)}</span>` : "—"}</td>
+          </tr>`).join("")}
+        </tbody>
+      </table>
+      <div class="report-summary">
+        <div class="report-summary-item"><span class="report-summary-label">Total</span><span class="report-summary-value">${overall.total ?? "—"}</span></div>
+        <div class="report-summary-item"><span class="report-summary-label">Percentage</span><span class="report-summary-value">${overall.pct !== null ? overall.pct.toFixed(1) + "%" : "—"}</span></div>
+        <div class="report-summary-item"><span class="report-summary-label">Average</span><span class="report-summary-value">${overall.average !== null ? overall.average.toFixed(1) : "—"}</span></div>
+        <div class="report-summary-item"><span class="report-summary-label">Grade</span><span class="report-summary-value">${overall.grade ? esc(overall.grade.label) : "—"}</span></div>
+        <div class="report-summary-item"><span class="report-summary-label">Position</span><span class="report-summary-value">${position ? `${position}${ordinalSuffix(position)}` : "—"}${totalStudents ? ` / ${totalStudents}` : ""}</span></div>
+      </div>
+      <div class="report-remark"><b>Remark:</b> ${esc(overall.grade?.remark || "—")}</div>
+      <div class="report-signature-row">
+        <div class="report-sig-line">Class Teacher</div>
+        <div class="report-sig-line">Principal</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderReportModal() {
+  if (State.reportModal.type === "single") {
+    const data = buildReportData(State.reportModal.studentId);
+    if (!data) return "";
+    return `<div class="report-overlay">
+      <div class="report-card-modal">
+        <div class="report-modal-toolbar">
+          <button class="title-btn" style="background:#107C41;border-color:#107C41" data-action="copy-report-link" data-id="${State.reportModal.studentId}">${State.linkCopiedFor === State.reportModal.studentId ? "✓ Copied" : "🔗 Copy share link"}</button>
+          <button class="title-btn" style="background:#A6790C;border-color:#A6790C" data-action="print-report">🖶 Print</button>
+          <button class="title-btn" style="background:#5F6368;border-color:#5F6368" data-action="close-report">Close</button>
+        </div>
+        <div id="report-print-area">${renderReportCardSheet(data)}</div>
+      </div>
+    </div>`;
+  }
+  const d = State.data;
+  const cards = d.students
+    .map((s) => renderReportCardSheet(buildReportData(s.id)))
+    .join('<div style="page-break-after:always"></div>');
+  return `<div class="report-overlay">
+    <div class="report-card-modal" style="max-width:720px">
+      <div class="report-modal-toolbar">
+        <button class="title-btn" style="background:#A6790C;border-color:#A6790C" data-action="print-report">🖶 Print all</button>
+        <button class="title-btn" style="background:#5F6368;border-color:#5F6368" data-action="close-report">Close</button>
+      </div>
+      <div id="report-print-area">${cards || `<div class="notice">No students yet.</div>`}</div>
+    </div>
+  </div>`;
+}
+
+function renderSetupTab() {
+  const d = State.data;
+  return `
+    <div class="setup-wrap">
+      <div class="setup-block">
+        <div class="setup-block-header"><div class="setup-block-title">Report card settings</div><div class="setup-block-hint">Shown at the top of every report card.</div></div>
+        <div class="max-row">
+          <label class="max-label" style="min-width:260px">School / class name<input class="max-input" style="width:100%" type="text" data-bind="school-name" value="${esc(d.schoolName || "")}" placeholder="e.g. Greenfield Academy — JSS 2" /></label>
+        </div>
+      </div>
+      <div class="setup-block">
+        <div class="setup-block-header"><div class="setup-block-title">Score maximums</div><div class="setup-block-hint">Applied to every subject.</div></div>
+        <div class="max-row">
+          <label class="max-label">1st C.A max<input class="max-input" type="number" data-bind="ca1max" value="${d.ca1Max}" /></label>
+          <label class="max-label">2nd C.A max<input class="max-input" type="number" data-bind="ca2max" value="${d.ca2Max}" /></label>
+          <label class="max-label">Exam max<input class="max-input" type="number" data-bind="exammax" value="${d.examMax}" /></label>
+          <span class="max-total" id="max-total-display">Total per subject: ${(Number(d.ca1Max) || 0) + (Number(d.ca2Max) || 0) + (Number(d.examMax) || 0)}</span>
+        </div>
+      </div>
+
+      <div class="setup-block">
+        <div class="setup-block-header"><div class="setup-block-title">Subjects</div><div class="setup-block-hint">One row per subject you teach.</div></div>
+        <div class="grid-scroll"><table class="mini-table">
+          <thead><tr><th class="col-letter-cell-small">A</th><th class="col-letter-cell-small"></th></tr>
+          <tr><th class="header-cell" style="text-align:left">Subject name</th><th class="header-cell"></th></tr></thead>
+          <tbody>
+            ${d.subjects.map((s, i) => `<tr class="${i % 2 === 1 ? "alt-row" : ""}">
+              <td class="input-cell"><input class="text-input" data-bind="subject-name" data-id="${s.id}" value="${esc(s.name)}" /></td>
+              <td class="data-cell"><button class="row-remove-btn" data-action="remove-subject" data-id="${s.id}">×</button></td>
+            </tr>`).join("")}
+            <tr><td class="name-cell"><button class="add-row-btn" data-action="add-subject">+ Add subject</button></td><td class="data-cell"></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+
+      <div class="setup-block">
+        <div class="setup-block-header"><div class="setup-block-title">Grade boundaries</div><div class="setup-block-hint">Your own scale — matched against percentage.</div></div>
+        <div class="grid-scroll"><table class="mini-table">
+          <thead>
+            <tr><th class="col-letter-cell-small">A</th><th class="col-letter-cell-small">B</th><th class="col-letter-cell-small">C</th><th class="col-letter-cell-small">D</th><th class="col-letter-cell-small">E</th><th class="col-letter-cell-small"></th></tr>
+            <tr><th class="header-cell">Grade</th><th class="header-cell">Min %</th><th class="header-cell">Max %</th><th class="header-cell">Remark</th><th class="header-cell">Color</th><th class="header-cell"></th></tr>
+          </thead>
+          <tbody>
+            ${d.boundaries.map((b, i) => `<tr class="${i % 2 === 1 ? "alt-row" : ""}">
+              <td class="input-cell"><input class="text-input" style="text-align:center;font-weight:700;color:${b.color}" data-bind="boundary-label" data-id="${b.id}" value="${esc(b.label)}" /></td>
+              <td class="input-cell"><input class="score-input" type="number" data-bind="boundary-min" data-id="${b.id}" value="${b.min}" /></td>
+              <td class="input-cell"><input class="score-input" type="number" data-bind="boundary-max" data-id="${b.id}" value="${b.max}" /></td>
+              <td class="input-cell"><input class="text-input" data-bind="boundary-remark" data-id="${b.id}" value="${esc(b.remark)}" /></td>
+              <td class="data-cell"><input type="color" data-bind="boundary-color" data-id="${b.id}" value="${b.color}" style="width:30px;height:22px;border:none;background:none;cursor:pointer" /></td>
+              <td class="data-cell"><button class="row-remove-btn" data-action="remove-boundary" data-id="${b.id}">×</button></td>
+            </tr>`).join("")}
+            <tr><td class="name-cell"><button class="add-row-btn" data-action="add-boundary">+ Add grade</button></td><td colspan="5" class="data-cell"></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+  `;
+}
+
+// ============================================================
+// event delegation (attached once — survives all innerHTML re-renders)
+// ============================================================
+root.addEventListener("click", (e) => {
+  const t = e.target.closest("[data-action]");
+  if (!t) return;
+  const action = t.dataset.action;
+  switch (action) {
+    case "set-view": State.view = t.dataset.view; renderMainApp(); break;
+    case "set-sheet": State.bottomSheet = t.dataset.sheet; renderMainApp(); break;
+    case "add-subject": addSubject(); scheduleSave(); renderMainApp(); break;
+    case "remove-subject": removeSubject(t.dataset.id); scheduleSave(); renderMainApp(); break;
+    case "add-student": addStudent(); scheduleSave(); renderScoresContainerOnly(); break;
+    case "remove-student": removeStudent(t.dataset.id); scheduleSave(); renderScoresContainerOnly(); break;
+    case "add-boundary": addBoundary(); scheduleSave(); renderMainApp(); break;
+    case "remove-boundary": removeBoundary(t.dataset.id); scheduleSave(); renderMainApp(); break;
+    case "reset-all": resetAll(); break;
+    case "logout": doLogout(); break;
+    case "auth-switch": switchAuthView(t.dataset.view); break;
+    case "auth-submit": submitAuthForm(); break;
+    case "firebase-setup-submit": submitFirebaseSetup(); break;
+    case "copy-report-link": copyReportLink(t.dataset.id); break;
+    case "clear-search": State.searchQuery = ""; renderScoresContainerOnly(); render_syncSearchBox(); break;
+    case "toggle-export-menu": toggleExportMenu(); break;
+    case "export-json": exportBackupJSON(); break;
+    case "export-csv": exportCSV(); break;
+    case "trigger-import": { const inp = document.getElementById("import-file-input"); if (inp) inp.click(); break; }
+    case "open-report": State.reportModal = { type: "single", studentId: t.dataset.id }; renderMainApp(); break;
+    case "print-all-reports": State.reportModal = { type: "all" }; State.exportMenuOpen = false; renderMainApp(); break;
+    case "close-report": State.reportModal = null; renderMainApp(); break;
+    case "print-report": window.print(); break;
+  }
+});
+
+document.addEventListener("click", (e) => {
+  if (State.exportMenuOpen && !e.target.closest("#export-wrap")) closeExportMenu();
+});
+
+root.addEventListener("change", (e) => {
+  const el = e.target;
+  if (el.dataset.action === "import-file") {
+    handleImportFile(el.files[0]);
+    el.value = "";
+  }
+  if (el.dataset.bind === "sort-by") {
+    State.sortBy = el.value;
+    renderScoresContainerOnly();
+  }
+});
+
+window.addEventListener("online", updateOnlineBadge);
+window.addEventListener("offline", updateOnlineBadge);
+
+function render_syncSearchBox() {
+  // rebuild just the pill row's search box so the clear button disappears too
+  const pillRow = root.querySelector(".pill-row");
+  if (pillRow) pillRow.outerHTML = renderScoresTab().split('<div id="scores-container"')[0];
+}
+
+root.addEventListener("input", (e) => {
+  const el = e.target;
+  const bind = el.dataset.bind;
+  if (!bind) return;
+  switch (bind) {
+    case "student-name": updateStudentName(el.dataset.id, el.value); scheduleSave(); break;
+    case "subject-name": updateSubjectName(el.dataset.id, el.value); scheduleSave(); break;
+    case "score":
+      setScore(el.dataset.student, el.dataset.subject, State.view, el.value);
+      if (State.sortBy === "position-asc" || State.sortBy === "position-desc") {
+        renderScoresContainerOnly(); // row order depends on live rank, so a full refresh keeps it accurate
+      } else {
+        patchRowStats();
+      }
+      scheduleSave();
+      break;
+    case "ca1max": setCa1Max(el.value); scheduleSave(); updateMaxTotal(); break;
+    case "ca2max": setCa2Max(el.value); scheduleSave(); updateMaxTotal(); break;
+    case "exammax": setExamMax(el.value); scheduleSave(); updateMaxTotal(); break;
+    case "boundary-label": updateBoundary(el.dataset.id, { label: el.value }); scheduleSave(); break;
+    case "boundary-min": updateBoundary(el.dataset.id, { min: Number(el.value) }); scheduleSave(); break;
+    case "boundary-max": updateBoundary(el.dataset.id, { max: Number(el.value) }); scheduleSave(); break;
+    case "boundary-remark": updateBoundary(el.dataset.id, { remark: el.value }); scheduleSave(); break;
+    case "boundary-color": updateBoundary(el.dataset.id, { color: el.value }); scheduleSave(); break;
+    case "school-name": setSchoolName(el.value); scheduleSave(); break;
+    case "search-query": State.searchQuery = el.value; renderScoresContainerOnly(); syncClearButton(); break;
+    case "auth-email": AuthForm.email = el.value; break;
+    case "auth-password": AuthForm.password = el.value; State.confirmMismatch = false; break;
+    case "auth-confirm": AuthForm.confirm = el.value; State.confirmMismatch = false; break;
+    case "auth-name": AuthForm.name = el.value; break;
+    case "firebase-config-text": FirebaseSetupForm.text = el.value; break;
+  }
+});
+
+function updateMaxTotal() {
+  const el = document.getElementById("max-total-display");
+  if (el) el.textContent = `Total per subject: ${(Number(State.data.ca1Max) || 0) + (Number(State.data.ca2Max) || 0) + (Number(State.data.examMax) || 0)}`;
+}
+
+function syncClearButton() {
+  const box = root.querySelector(".search-box");
+  if (!box) return;
+  let btn = box.querySelector(".search-clear-btn");
+  if (State.searchQuery && !btn) {
+    btn = document.createElement("button");
+    btn.className = "search-clear-btn";
+    btn.title = "Clear search";
+    btn.textContent = "×";
+    btn.dataset.action = "clear-search";
+    box.appendChild(btn);
+  } else if (!State.searchQuery && btn) {
+    btn.remove();
+  }
+}
+
+root.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && e.target.closest(".auth-form")) {
+    e.preventDefault();
+    submitAuthForm();
+  }
+});
+
+// ============================================================
+// bootstrap
+// ============================================================
+function bootstrap() {
+  // A shared report link (?report=TOKEN) bypasses login entirely and
+  // only ever reads that one public, read-only Firestore document.
+  const params = new URLSearchParams(window.location.search);
+  const reportToken = params.get("report");
+
+  const cfg = getSavedFirebaseConfig();
+  if (!cfg) {
+    State.authChecked = true;
+    renderFirebaseSetupScreen();
+    return;
+  }
+  try {
+    initFirebase(cfg);
+  } catch (e) {
+    State.authChecked = true;
+    State.firebaseSetupError = "Couldn't connect with the saved Firebase config (" + (e && e.message ? e.message : "unknown error") + "). Please re-enter it.";
+    clearFirebaseConfig();
+    renderFirebaseSetupScreen();
+    return;
+  }
+  State.firebaseConfigured = true;
+
+  if (reportToken) {
+    loadPublicReport(reportToken);
+    return;
+  }
+
+  let authSettled = false;
+  auth.onAuthStateChanged((fbUser) => {
+    authSettled = true;
+    State.authChecked = true;
+    if (fbUser) {
+      State.user = { email: fbUser.email, name: fbUser.displayName || (fbUser.email || "").split("@")[0], uid: fbUser.uid };
+      loadUserData().then(render);
+    } else {
+      State.user = null;
+      State.data = null;
+      State.loaded = false;
+      render();
+    }
+  });
+  // some locked-down browsers block the storage this listener depends on —
+  // fall back to a plain login screen rather than hanging on "Loading…" forever
+  setTimeout(() => {
+    if (!authSettled) { State.authChecked = true; render(); }
+  }, 6000);
+}
+
+bootstrap();
+</script>
+</body>
+</html>
